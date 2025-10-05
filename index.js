@@ -1,15 +1,17 @@
 import express from "express";
 import axios from "axios";
+import cors from "cors";   // new
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Root route
+app.use(cors());  // allow frontend access
+
 app.get("/", async (req, res) => {
   try {
     const response = await axios.get("https://data-api.binance.vision/api/v3/ticker/price", {
       headers: {
-        "User-Agent": "Mozilla/5.0"  // Binance block na kare is liye header add
+        "User-Agent": "Mozilla/5.0"
       }
     });
     res.json(response.data);
