@@ -1,24 +1,29 @@
+```js
+// index.js
 import express from "express";
-import fetch from "node-fetch";
+import axios from "axios";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
-const BINANCE_API = "https://api.binance.com/api/v3/ticker/24hr";
+app.get("/", (req, res) => {
+  res.send("✅ Server is running. Use /price to check data.");
+});
 
-async function fetchCoins() {
-  const res = await fetch(BINANCE_API);
-  const data = await res.json();
-  return data.slice(0, 50); // abhi 50 coins, extend kar sakte ho
-}
-
-app.get("/", async (req, res) => {
+app.get("/price", async (req, res) => {
   try {
-    const coins = await fetchCoins();
-    res.json({ status: "ok", coins });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch Binance data" });
+    const response = await axios.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT");
+    res.json({
+      success: true,
+      data: response.data
+    });
+  } catch (error) {
+    console.error("❌ Binance API Error:", error.message);
+    res.status(500).json({ error: "Failed to fetch Binance data", details: error.message });
   }
 });
 
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+```
