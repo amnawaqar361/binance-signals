@@ -1,31 +1,24 @@
 import express from "express";
-import WebSocket from "ws";
+import fetch from "node-fetch";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const prices = {}; // coins data memory me store hoga
+const BINANCE_API = "https://api.binance.com/api/v3/ticker/24hr";
 
-// Binance ka global ticker WebSocket
-const ws = new WebSocket("wss://stream.binance.com:9443/ws/!ticker@arr");
+async function fetchCoins() {
+  const res = await fetch(BINANCE_API);
+  const data = await res.json();
+  return data.slice(0, 50); // abhi 50 coins, extend kar sakte ho
+}
 
-ws.on("message", (data) => {
+app.get("/", async (req, res) => {
   try {
-    const tickers = JSON.parse(data);
-    tickers.forEach(t => {
-      prices[t.s] = { price: t.c, change: t.P }; // s = symbol, c = current price, P = % change
-    });
+    const coins = await fetchCoins();
+    res.json({ status: "ok", coins });
   } catch (err) {
-    console.error("WebSocket error:", err.message);
+    res.status(500).json({ error: "Failed to fetch Binance data" });
   }
 });
 
-app.get("/", (req, res) => {
-  const list = Object.keys(prices).slice(0, 20).map(symbol => ({
-    symbol,
-    ...prices[symbol]
-  }));
-  res.json({ status: "ok", coins: list });
-});
-
-app.listen(PORT, () => console.log(`✅ Server running on ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on ${PORT}`));
