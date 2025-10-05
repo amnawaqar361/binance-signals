@@ -1,29 +1,31 @@
 import express from "express";
-import axios from "axios";
+import WebSocket from "ws";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const BINANCE_API = "https://api.binance.com/api/v3/ticker/24hr";
+const prices = {}; // coins data memory me store hoga
 
-app.get("/", async (req, res) => {
+// Binance ka global ticker WebSocket
+const ws = new WebSocket("wss://stream.binance.com:9443/ws/!ticker@arr");
+
+ws.on("message", (data) => {
   try {
-    const response = await axios.get(BINANCE_API, {
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0"
-      }
-    });
-
-    // Sirf 20 coins test ke liye bhej rahe hain
-    res.json({
-      status: "ok",
-      coins: response.data.slice(0, 20)
+    const tickers = JSON.parse(data);
+    tickers.forEach(t => {
+      prices[t.s] = { price: t.c, change: t.P }; // s = symbol, c = current price, P = % change
     });
   } catch (err) {
-    console.error("Error fetching Binance data:", err.message);
-    res.status(500).json({ error: "Failed to fetch Binance data" });
+    console.error("WebSocket error:", err.message);
   }
 });
 
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.get("/", (req, res) => {
+  const list = Object.keys(prices).slice(0, 20).map(symbol => ({
+    symbol,
+    ...prices[symbol]
+  }));
+  res.json({ status: "ok", coins: list });
+});
+
+app.listen(PORT, () => console.log(`✅ Server running on ${PORT}`));
